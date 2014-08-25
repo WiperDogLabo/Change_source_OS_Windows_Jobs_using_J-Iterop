@@ -1,0 +1,40 @@
+/**
+ * Monitoring CPU statistics.<br/>
+ * @targetVersion Windows Xp Professional, Version 2002, Service Pack 3
+ * @return get informations on the use of cpu.
+ * @returnParam LoadPct The percentage of the cpu have been loaded.
+ */
+JOB = [name:"OS.CPU_Windows"]
+
+FETCHACTION = {
+	def resultData = [:]
+	def cores = 0
+	//Get total cpu usage percentage of all core
+	listObj = wmiAcc.getObjectsDispatch("Win32_PerfFormattedData_PerfOS_Processor")
+	def totalPercentage = 0
+	def total = 0
+	listObj.find{
+		if("_Total".equals(it.get("Name").getObjectAsString2())) {
+			totalPercentage = (it.get("PercentProcessorTime").getObjectAsString2()).toInteger()
+		}
+	}
+	
+	resultData["LoadPct"] = totalPercentage
+	return resultData
+}
+
+KEYEXPR = ['_sequence':['LoadPct']]
+KEYEXPR._unit = ["LoadPct":"%"]
+KEYEXPR._chart = [
+	[
+        "type": "line",
+        "name": "Information Usage CPU",
+        "chart_columns": ["LoadPct"]
+    ]
+]
+
+SENDTYPE = "Store"
+RESOURCEID = "Windows/CPU"
+DEST = parameters.dest
+OSINFO = parameters.osinfo
+MONITORINGTYPE = '@OS'
