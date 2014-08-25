@@ -56,7 +56,12 @@ class WMIAccesor implements WMIAccessorService {
 					.getObjectAsComObject());
 		} catch (SmbAuthException e) {
 			println "[WMIMonitoring] - Failed to authenticate: " + e
-		} catch(Exception e){
+		} catch(org.jinterop.dcom.common.JIException e) {
+             println "[WMIMonitoring] - " +  e.getMessage()
+         	if(e.getMessage().contains("Windows Registry")){
+         		println "[WMIMonitoring] - Please try to start Remote Registry service from Windows services catalogue before using WMI moitoring"
+         	}
+	    } catch(Exception e){
 			println "[WMIMonitoring] - Failed to init WMIAccessor: " + e
 		}
 	}
