@@ -1,1 +1,1 @@
-[osinfo: [domain:'localhost',host:'localhost',user:'',pass:'',os:'win']]
+[osinfo: [domain:'yourdomain',host:'hostaddress',user:'username',pass:'password',os:'win']]

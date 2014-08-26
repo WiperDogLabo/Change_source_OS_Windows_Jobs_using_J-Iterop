@@ -1,0 +1,94 @@
+/**
+ * Monitoring I/O of network.<br/>
+ * <p>
+ * Display status of the currently active interfaces.<br/>
+ * </p>
+ * @targetVersion Windows Xp Professional, Version 2002, Service Pack 3
+ * @return get information for network in use.
+ * @returnParam NetworkCardName The name of the interface.
+ * @returnParam PacketsReceivedCnt The number of packets have been received.
+ * @returnParam PacketsSentCnt The number of packets have been sent.
+ * @returnParam BytesReceivedVal The total amount of data have been received.
+ * @returnParam BytesSentVal The total amount of data have been sent.
+ */
+JOB = [name:"OS.Network_IO_Windows"]
+FETCHACTION = {
+   	def listData = []
+	listObj = wmiAcc.getObjectsDispatch("Win32_PerfRawData_Tcpip_NetworkInterface")
+	listObj.each{
+	    def tmpElemData = [:]
+	    tmpElemData['NetworkCardName'] = it.get("Name").getObjectAsString2();
+	    tmpElemData['PacketsReceivedCnt'] = it.get("PacketsReceivedPersec").getObjectAsString2().toLong()
+	    tmpElemData['PacketsSentCnt'] =it.get("PacketsSentPersec").getObjectAsString2().toLong()
+	    tmpElemData['BytesReceivedVal'] = it.get("BytesReceivedPersec").getObjectAsString2().toLong()
+	    tmpElemData['BytesSentVal'] =  it.get("BytesSentPersec").getObjectAsString2().toLong()
+	    listData.add(tmpElemData)
+	}
+   return listData
+}
+
+ACCUMULATE = {
+  assert interval != null, "First time, we cannot return meaningful values"
+  if(prevOUTPUT != null) {
+    OUTPUT.each { rec ->
+      def checkExists = false
+      prevOUTPUT.each { prevREC ->
+        if (prevREC.NetworkCardName == rec.NetworkCardName) {
+          // packets have been received.
+          rec['DiffPacketsReceivedVal'] = rec['PacketsReceivedCnt'] - prevREC['PacketsReceivedCnt']
+          rec['PacketsReceivedPerSecVal'] = rec['DiffPacketsReceivedVal'] / interval
+          // packets have been sent.
+          rec['DiffPacketsSentVal'] = rec['PacketsSentCnt'] - prevREC['PacketsSentCnt']
+          rec['PacketsSentPerSecVal'] = rec['DiffPacketsSentVal'] / interval
+          // total packets have been received.
+          rec['DiffBytesReceivedVal'] = rec['BytesReceivedVal'] - prevREC['BytesReceivedVal']
+          rec['BytesReceivedPerSecVal'] = rec['DiffBytesReceivedVal'] / interval
+          // total packets have been sent.
+          rec['DiffBytesSentVal'] = rec['BytesSentVal'] - prevREC['BytesSentVal']
+          rec['BytesSentPerSecVal'] = rec['DiffBytesSentVal'] / interval
+          checkExists = true
+        }
+      }
+      if(!checkExists) {
+        // packets have been received.
+        rec['DiffPacketsReceivedVal'] = rec['PacketsReceivedCnt']
+        rec['PacketsReceivedPerSecVal'] = rec['PacketsReceivedCnt'] / interval
+        // packets have been sent.
+        rec['DiffPacketsSentVal'] = rec['PacketsSentCnt'] 
+        rec['PacketsSentPerSecVal'] = rec['PacketsSentCnt'] / interval
+        // total packets have been received.
+        rec['DiffBytesReceivedVal'] = rec['BytesReceivedVal']
+        rec['BytesReceivedPerSecVal'] = rec['DiffBytesReceivedVal'] / interval
+        // total packets have been sent.
+        rec['DiffBytesSentVal'] = rec['BytesSentVal']
+        rec['BytesSentPerSecVal'] = rec['DiffBytesSentVal'] / interval
+      }
+    }
+  }
+}
+
+KEYEXPR = [_root:["NetworkCardName"] , _sequence:["PacketsReceivedCnt","BytesReceivedVal"]]
+KEYEXPR._unit = [
+    "PacketsReceivedCnt" : "count", "DiffPacketsReceivedVal": "count/interval", "PacketsReceivedPerSecVal": "count/sec",
+    "PacketsSentCnt":"count", "DiffPacketsSentVal": "count/interval", "PacketsSentPerSecVal": "count/sec",
+    "BytesReceivedCnt":"byte", "DiffBytesReceivedVal": "byte/interval", "BytesReceivedPerSecVal": "byte/sec",
+    "BytesSentCnt":"byte", "DiffBytesSentVal": "byte/interval", "BytesSentPerSecVal": "byte/sec"
+  ]
+KEYEXPR._chart = [
+    [
+        "type": "line",
+        "name": "Network I/O Windows - Packets transfering",
+        "chart_columns": ["DiffPacketsReceivedVal", "DiffPacketsSentVal"]
+    ],
+    [
+        "type": "line",
+        "name": "Network I/O Windows - Bytes transfering",
+        "chart_columns": ["DiffBytesReceivedVal", "DiffBytesSentVal"]
+
+    ]
+]
+SENDTYPE = "Store"
+RESOURCEID = "Windows/NetworkIO"
+DEST = parameters.dest
+OSINFO = parameters.osinfo
+MONITORINGTYPE = '@OS'

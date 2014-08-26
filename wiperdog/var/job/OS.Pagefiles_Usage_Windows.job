@@ -1,0 +1,45 @@
+/**
+ * Monitoring statistics of page file.<br/>
+ * @targetVersion Windows Xp Professional, Version 2002, Service Pack 3
+ * @return get information for each pagefile in use.
+ * @returnParam PagefileLocName The location to pagefile.
+ * @returnParam TotalPagefileSizeKB The total amount of page file.
+ * @returnParam CurrentUsageKB The number of page file usage.
+ * @returnParam FreePagefileKB The number of page file free.
+ * @returnParam UsedPct The percentage of page file used.
+ */
+JOB = [name:"OS.Pagefiles_Usage_Windows"]
+FETCHACTION = {
+   	def resultData = [:]
+   	def listData = []
+	listObj = wmiAcc.getObjectsDispatch("Win32_PageFile")
+	listObj.each{
+   		def finalData = [:]
+		finalData["PagefileLocName"] = it.get("FileName").getObjectAsString2()
+		finalData["TotalPagefileSizeKB"] = Math.round(it.get("FileSize").getObjectAsString2().toLong()/1024)		
+		finalData["FreePagefileKB"] =  Math.round(it.get("FreeSpace").getObjectAsInt()/1024)
+		finalData["CurrentUsageKB"] = finalData["TotalPagefileSizeKB"] - finalData["FreePagefileKB"]
+		finalData["UsedPct"] = Math.round((finalData["CurrentUsageKB"]/ finalData["TotalPagefileSizeKB"])*100)
+		listData.add(finalData)
+	}
+	return listData
+}
+KEYEXPR = [_root:["PagefileLocName"],_sequence:["CurrentUsageKB","FreePagefileKB","UsedPct"]]
+KEYEXPR._unit = [ "TotalPagefileSizeKB" : "KB", "CurrentUsageKB": "KB", "FreePagefileKB" : "KB","UsedPct":"%" ]
+KEYEXPR._chart = [
+	[
+		type:"line",
+		name:"Pagefiles Usage Windows - Usage percentage",
+		chart_columns:["UsedPct"]
+	],
+	[	
+		type:"pie",
+		name:"Pagefiles Usage Windows",
+		chart_columns:["CurrentUsageKB","FreePagefileKB"]
+	] 
+]
+DEST = parameters.dest
+OSINFO = parameters.osinfo
+MONITORINGTYPE = '@OS'
+RESOURCEID = "Windows/PageFilesUsage"
+SENDTYPE = "Store"

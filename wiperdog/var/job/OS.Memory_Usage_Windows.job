@@ -1,0 +1,46 @@
+/**
+ * Monitoring used memory by OS.<br/>
+ * <p>
+ * Display amount of free and used memory in the system.<br/>
+ * </p>
+ * @targetVersion Windows Xp Professional, Version 2002, Service Pack 3
+ * @return get information of memory in use by OS.
+ * @returnParam FreeMemoryKB The memory not in use by OS.
+ * @returnParam TotalMemorySizeKB The total memory in use by OS.
+ * @returnParam UsedMemoryKB The memory in use by OS.
+ * @returnParam UsedMemoryPct The percentage of memory in use by OS.
+ */
+JOB = [name:"OS.Memory_Usage_Windows"]
+FETCHACTION = {
+	
+   	def resultData = [:]
+   	def listData = []
+	listObj = wmiAcc.getObjectsDispatch("Win32_OperatingSystem")
+	listObj.each{
+		resultData["FreeMemorySizeKB"] = Math.round(it.get("FreePhysicalMemory").getObjectAsString2().toLong())
+		resultData["TotalMemorySizeKB"] = Math.round(it.get("TotalVisibleMemorySize").getObjectAsString2().toLong())
+		resultData["UsedMemorySizeKB"] = resultData["TotalMemorySizeKB"] - resultData["FreeMemorySizeKB"]
+		resultData["UsedMemoryPct"] = Math.round((resultData["UsedMemorySizeKB"]/resultData["TotalMemorySizeKB"])*100)
+		listData.add(resultData)
+	}
+   return listData
+}
+KEYEXPR = [_sequence:["FreeMemorySizeKB","UsedMemorySizeKB","UsedMemoryPct"]]
+KEYEXPR._unit = [ "FreeMemorySizeKB" : "KB", "UsedMemorySizeKB": "KB", "UsedMemoryPct" : "%" ]
+KEYEXPR._chart = [
+	[
+		type:"line",
+		name:"Memory Usage Windows",
+		chart_columns:["UsedMemoryPct"]
+	],
+	[	
+		type:"pie",
+		name:"Memory Usage Windows",
+		chart_columns:["FreeMemorySizeKB","UsedMemorySizeKB"]
+	] 
+]
+DEST = parameters.dest
+OSINFO = parameters.osinfo
+MONITORINGTYPE = '@OS'
+RESOURCEID = "Windows/Memory"
+SENDTYPE = "Store"

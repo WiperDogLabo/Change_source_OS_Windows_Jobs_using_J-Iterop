@@ -1,0 +1,78 @@
+/**
+ * Monitoring statistics of processes.<br/>
+ * <p>
+ * Display processes running on the system.<br/>
+ * </p>
+ * @targetVersion Windows Xp Professional, Version 2002, Service Pack 3
+ * @return get information for each process in use.
+ * @returnParam ExecutalePathName The executable path to the process.
+ * @returnParam Name The name of the process.
+ * @returnParam PageFileUsageKB The total amount of page file usage by the process.
+ * @returnParam PriorityInt The priority of the process.
+ * @returnParam ProcessId The number id of the process.
+ * @returnParam WorkingSetSizeKB The size of the process for working.
+ */
+JOB = [name:"OS.Process_Windows"]
+
+FETCHACTION = {
+	def finalData = []
+	def listAllData = []
+	def resultData = [:]
+	def listObj = wmiAcc.getObjectsDispatch("Win32_Process")
+	listObj.each{
+		def processItem = [:]
+		processItem["Name"] = it.get("Name").getObjectAsString2()
+		processItem["PageFileUsageKB"] = it.get("PageFileUsage").getObjectAsInt()
+		processItem["PriorityInt"] =  it.get("Priority").getObjectAsInt()
+		processItem["ProcessId"] =  it.get("ProcessId").getObjectAsInt()
+		processItem["WorkingSetSizeKB"] =  Math.round(it.get("WorkingSetSize").getObjectAsString2().toLong()/1024)
+		
+		try {
+			processItem["ExecutablePathName"] =   it.get("ExecutablePath").getObjectAsString2();
+		}catch(Exception ex){
+			if(it.get("ExecutablePath").getObjectAsInt() == 0){
+				processItem["ExecutablePathName"] = ""
+			}
+			
+		}
+		listAllData.add(processItem)
+	}
+	// Sort records by WorkingSetSizeKB and PageFileUsageKB
+	def arrayMapData = listAllData.toArray()
+	Arrays.sort(arrayMapData, new Comparator() {
+		public int compare(arg0, arg1) {
+			def first = arg0
+			def second = arg1
+			int countTime = (second['WorkingSetSizeKB'] != null ? second['WorkingSetSizeKB'] : 0) - (first['WorkingSetSizeKB'] != null ? first['WorkingSetSizeKB'] : 0)
+			if (countTime == 0) {
+				int countExecute = (second['PageFileUsageKB'] != null ? second['PageFileUsageKB'] : 0) - (first['PageFileUsageKB'] != null ? first['PageFileUsageKB'] : 0)
+				countTime = (countExecute < 0 ? -1 : (countExecute == 0 ? 0 : 1))
+			}
+			return countTime
+		}
+	})
+	//get top 10 process
+	if (listAllData.size() > 10) {
+		 finalData = arrayMapData.getAt(0..9)
+	} else {
+		 finalData = arrayMapData
+	}
+
+	return finalData
+}
+
+KEYEXPR = [_root:['ProcessId'],_sequence:['WorkingSetSizeKB','PageFileUsageKB','PriorityInt']]
+KEYEXPR._unit = ["PageFileUsageKB": "KB", "WorkingSetSizeKB":"byte"]
+KEYEXPR._chart = [
+	[
+        "type": "line",
+        "name": "Process Information",
+        "chart_columns": ["PageFileUsageKB", "WorkingSetSizeKB"]
+    ]
+]
+
+SENDTYPE = "Store"
+RESOURCEID = "Windows/Process"
+DEST = parameters.dest
+OSINFO = parameters.osinfo
+MONITORINGTYPE = '@OS'

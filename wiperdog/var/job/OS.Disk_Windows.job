@@ -6,9 +6,9 @@
  * @targetVersion Windows Xp Professional, Version 2002, Service Pack 3
  * @return get amount of disk space available on the system.
  * @returnParam DiskName The name of the disk in system.
- * @returnParam TotalSpaceInt The size of the disk drive.
+ * @returnParam TotalSpaceKB The size of the disk drive.
  * @returnParam AvaiableSpaceInt Space, in bytes, available on the logical disk.
- * @returnParam UsedSpaceInt The size of the disk drive in used.
+ * @returnParam UsedSpaceKB The size of the disk drive in used.
  * @returnParam UsedPct The percentage of the disk drive in used.
  */
 JOB = [name:"OS.Disk_Windows"]
@@ -19,24 +19,24 @@ FETCHACTION = {
 	listObj.each{
 		if(it.get("DriveType").getObjectAsInt() == 3) { 
 			def tmpData = [:]
-			tmpData["PartitionName"] = it.get("Caption").getObjectAsString2()
-			tmpData["AvailableSpaceInt"] = Math.round(it.get("FreeSpace").getObjectAsString2().toLong()/(1024*1024))
-			tmpData["TotalSpaceInt"] =  Math.round(it.get("Size").getObjectAsString2().toLong()/(1024*1024))
-			tmpData["UsedSpaceInt"] =(tmpData["TotalSpaceInt"] - tmpData["AvailableSpaceInt"])
-			tmpData["UsedPct"] = Math.round((tmpData["UsedSpaceInt"]/tmpData["TotalSpaceInt"])*100)
+			tmpData["DiskName"] = it.get("Caption").getObjectAsString2()
+			tmpData["AvailableSpaceKB"] = it.get("FreeSpace").getObjectAsString2().toLong()
+			tmpData["TotalSpaceKB"] =  it.get("Size").getObjectAsString2().toLong()
+			tmpData["UsedSpaceKB"] =(tmpData["TotalSpaceKB"] - tmpData["AvailableSpaceKB"])
+			tmpData["UsedPct"] = Math.round((tmpData["UsedSpaceKB"]/tmpData["TotalSpaceKB"])*100)
 			resultData.add(tmpData)
 		}
 	}
 	return resultData
 }
 
-KEYEXPR = ['_root':['PartitionName'], '_sequence':['UsedPct','AvaiableSpaceInt','UsedSpaceInt']]
-KEYEXPR._unit = ["TotalSpaceInt":"MB","AvaiableSpaceInt":"MB","UsedSpaceInt":"MB","UsedPct":"%"]
+KEYEXPR = ['_root':['DiskName'], '_sequence':['UsedPct','AvailableSpaceKB','UsedSpaceKB']]
+KEYEXPR._unit = ["TotalSpaceKB":"byte","AvailableSpaceKB":"byte","UsedSpaceKB":"byte","UsedPct":"%"]
 KEYEXPR._chart = [
 	[
         "type": "pie",
         "name": "Current Space Disk",
-        "chart_columns": ["UsedSpaceInt", "AvaiableSpaceInt"]
+        "chart_columns": ["UsedSpaceKB", "AvailableSpaceKB"]
     ],
     [
         "type": "line",

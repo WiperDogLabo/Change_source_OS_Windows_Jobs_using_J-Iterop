@@ -1,0 +1,45 @@
+/**
+ * Monitoring properties of system.<br/>
+ * @targetVersion Windows Xp Professional, Version 2002, Service Pack 3
+ * @return get properties of OS.
+ * @returnParam OSName The name of the OS.
+ * @returnParam HostName The host name of the OS.
+ * @returnParam InstallDate The date time of the OS installed.
+ * @returnParam NumberOfUsersCnt The total amount of user in the OS.
+ * @returnParam ServicePackVersionID The id of the service pack major version.
+ * @returnParam VersionID The id version of the OS.
+ * @returnParam WindowsDirName The path to Windows folder of the OS.
+ */
+JOB = [name:"OS.OS_Information_Windows"]
+
+FETCHACTION = {
+	
+	def convertToDate = { dateStr ->
+		dateStr = (dateStr.trim().split("\\.") as List )[0]	
+		java.text.SimpleDateFormat sf = new java.text.SimpleDateFormat("yyyyMMddHHmmss")
+		def date = sf.parse(dateStr)
+		sf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+		return sf.format(date)
+	}
+	
+   	def resultData = [:]
+   	def listData = []
+	def listObj = wmiAcc.getObjectsDispatch("Win32_OperatingSystem")
+	listObj.each{
+		resultData["OSName"] = it.get("Caption").getObjectAsString2()
+		resultData["VersionID"] = it.get("Version").getObjectAsString2()
+		resultData["WindowsDirName"] = it.get("WindowsDirectory").getObjectAsString2()
+		resultData["NumberOfUsersCnt"] = it.get("NumberOfUsers").getObjectAsInt()
+		resultData["HostName"] = it.get("CSName").getObjectAsString2()
+		def installDate = it.get("InstallDate").getObjectAsString2()
+		resultData["InstallDate"] = convertToDate(installDate)
+		resultData["ServicePackVersionID"] = it.get("ServicePackMajorVersion").getObjectAsInt()
+		listData.add(resultData)
+	}
+	return listData
+}
+SENDTYPE = "Store"
+DEST = parameters.dest
+OSINFO = parameters.osinfo
+MONITORINGTYPE = '@OS'
+RESOURCEID = "Windows/OSInfo"
