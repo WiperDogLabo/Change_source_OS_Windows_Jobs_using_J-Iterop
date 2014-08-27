@@ -26,7 +26,7 @@ FETCHACTION = {
    return listData
 }
 KEYEXPR = [_sequence:["FreeMemorySizeKB","UsedMemorySizeKB","UsedMemoryPct"]]
-KEYEXPR._unit = [ "FreeMemorySizeKB" : "KB", "UsedMemorySizeKB": "KB", "UsedMemoryPct" : "%" ]
+KEYEXPR._unit = [ "FreeMemorySizeKB" : "KB", "TotalMemorySizeKB": "KB", "UsedMemorySizeKB": "KB", "UsedMemoryPct" : "%" ]
 KEYEXPR._chart = [
 	[
 		type:"line",
